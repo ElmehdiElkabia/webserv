@@ -1,22 +1,29 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
-#include <iostream>
+#include <string>
 #include <map>
 
 class HttpRequest
 {
 public:
-	std::string method;
-	std::string path;
-	std::string version;
-	std::map<std::string, std::string> headers;
-	std::string body;
+    // Request line
+    std::string method;
+    std::string path;
+    std::string version;
 
-	bool isComplete;
+    // Headers & body
+    std::map<std::string, std::string> headers;
+    std::string body;
 
-	HttpRequest();
+    // Parsing / validation state
+    size_t      contentLength;
+    bool        isComplete;
+    bool        isValid;
+    int         errorCode;
+
+public:
+    HttpRequest();
 };
-
 
 #endif
