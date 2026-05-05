@@ -1,7 +1,7 @@
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
-#include <string>
+#include <iostream>
 #include <map>
 
 class HttpRequest
