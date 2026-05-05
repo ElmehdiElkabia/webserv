@@ -1,7 +1,6 @@
 #ifndef HTTPPARSER_HPP
 #define HTTPPARSER_HPP
 
-#include <string>
 #include "HttpRequest.hpp"
 
 class HttpParser
@@ -45,7 +44,7 @@ private:
     bool parseBody();
 
     // Helpers
-    std::string extractLine(size_t& pos);
+    std::string extractLine(size_t& pos, bool& lineComplete);
     void clearProcessedData();
 };
 
