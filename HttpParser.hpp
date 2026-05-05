@@ -44,7 +44,7 @@ private:
     bool parseBody();
 
     // Helpers
-    std::string extractLine(size_t& pos, bool& lineComplete);
+    std::string extractLine(const std::string& source, size_t& pos, bool& lineComplete);
     void clearProcessedData();
 };
 
