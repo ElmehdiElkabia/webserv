@@ -1,5 +1,7 @@
 #include "HttpParser.hpp"
 
+#include <cstdlib>
+
 HttpParser::HttpParser() : headersParsed(false), bodyParsed(false), headerEndPos(0) {}
 
 HttpRequest HttpParser::getRequest() const
@@ -38,29 +40,29 @@ void HttpParser::parseRequestLine(const std::string &line)
         return;
     }
 
-    currentRequest.method = line.substr(0, methodEnd);
-    if (currentRequest.method != "GET" && currentRequest.method != "POST" && currentRequest.method != "DELETE")
-    {
-        currentRequest.isValid = false;
-        currentRequest.errorCode = 405;
-        return;
-    }
-
     if (line.find(' ', pathEnd + 1) != std::string::npos)
     {
         currentRequest.isValid = false;
         currentRequest.errorCode = 400;
         return;
     }
+
+    currentRequest.method = line.substr(0, methodEnd);
     currentRequest.path = line.substr(methodEnd + 1, pathEnd - methodEnd - 1);
+    currentRequest.version = line.substr(pathEnd + 1);
+
+    if (currentRequest.method != "GET" && currentRequest.method != "POST" && currentRequest.method != "DELETE")
+    {
+        currentRequest.isValid = false;
+        currentRequest.errorCode = 405;
+        return;
+    }
     if (currentRequest.version != "HTTP/1.1")
     {
         currentRequest.isValid = false;
         currentRequest.errorCode = 400;
         return;
     }
-
-    currentRequest.version = line.substr(pathEnd + 1);
     if (currentRequest.path.empty() || currentRequest.path[0] != '/')
     {
         currentRequest.isValid = false;
@@ -87,16 +89,21 @@ void HttpParser::clearProcessedData()
     }
 }
 
-std::string HttpParser::extractLine(size_t &pos, bool &lineComplete)
+std::string HttpParser::extractLine(const std::string &source, size_t &pos, bool &lineComplete)
 {
     lineComplete = false;
-    if (pos >= buffer.size())
+    if (pos >= source.size())
         return "";
 
-    size_t lineEnd = buffer.find("\r\n", pos);
+    size_t lineEnd = source.find("\r\n", pos);
     if (lineEnd == std::string::npos)
-        return "";
-    std::string line = buffer.substr(pos, lineEnd - pos);
+    {
+        std::string line = source.substr(pos);
+        pos = source.size();
+        lineComplete = true;
+        return line;
+    }
+    std::string line = source.substr(pos, lineEnd - pos);
     pos = lineEnd + 2; // Move past "\r\n"
     lineComplete = true;
     return line;
@@ -109,11 +116,11 @@ void HttpParser::parseHeaders(const std::string &headersBlock)
     bool hasHost = false;
     while (pos < headersBlock.size())
     {
-        std::string line = extractLine(pos, lineComplete);
+        std::string line = extractLine(headersBlock, pos, lineComplete);
         if (!lineComplete)
             return;
         if (line.empty())
-            brak; // End of headers
+            break; // End of headers
         size_t colonPos = line.find(':');
         if (colonPos == std::string::npos)
         {
@@ -136,7 +143,8 @@ void HttpParser::parseHeaders(const std::string &headersBlock)
         {
             try
             {
-                currentRequest.contentLength = std::stoul(value);
+                long long v = std::strtoll(value.c_str(), NULL, 10);
+                currentRequest.contentLength = static_cast<int>(v);
             }
             catch (...)
             {
@@ -177,6 +185,8 @@ void HttpParser::parseHeaders(const std::string &headersBlock)
 
 bool HttpParser::parseBody()
 {
+    
+
     if (currentRequest.contentLength > 0)
     {
         if (buffer.size() < currentRequest.contentLength)
@@ -188,3 +198,39 @@ bool HttpParser::parseBody()
     return true;
 }
 
+int HttpParser::parse()
+{
+    if (!headersParsed)
+    {
+        if (!detectHeadersEnd())
+            return 0; // Need more data
+
+        std::string requestLineAndHeaders = buffer.substr(0, headerEndPos);
+        size_t lineEndPos = requestLineAndHeaders.find("\r\n");
+        if (lineEndPos == std::string::npos)
+        {
+            currentRequest.isValid = false;
+            currentRequest.errorCode = 400;
+            return -1;
+        }
+        std::string requestLine = requestLineAndHeaders.substr(0, lineEndPos);
+        parseRequestLine(requestLine);
+        if (!currentRequest.isValid)
+            return -1;
+
+        std::string headersBlock = requestLineAndHeaders.substr(lineEndPos + 2);
+        parseHeaders(headersBlock);
+        if (!currentRequest.isValid)
+            return -1;
+
+        clearProcessedData();
+    }
+
+    if (!bodyParsed)
+    {
+        if (!parseBody())
+            return 0; // Need more data
+    }
+
+    return 1; // Request fully parsed
+}
