@@ -174,3 +174,17 @@ void HttpParser::parseHeaders(const std::string &headersBlock)
     }
     headersParsed = true;
 }
+
+bool HttpParser::parseBody()
+{
+    if (currentRequest.contentLength > 0)
+    {
+        if (buffer.size() < currentRequest.contentLength)
+            return false; // Body not fully received yet
+        currentRequest.body = buffer.substr(0, currentRequest.contentLength);
+        clearProcessedData();
+    }
+    bodyParsed = true;
+    return true;
+}
+
