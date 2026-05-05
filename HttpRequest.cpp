@@ -1,3 +1,6 @@
 #include "HttpRequest.hpp"
 
-HttpRequest::HttpRequest() : isComplete(false) {}
+HttpRequest::HttpRequest()
+	: contentLength(0), isComplete(false), isValid(true), errorCode(0)
+{
+}
