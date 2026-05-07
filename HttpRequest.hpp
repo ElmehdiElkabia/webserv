@@ -24,6 +24,7 @@ public:
 
 public:
     HttpRequest();
+	std::string getUri() const;
 };
 
 #endif
