@@ -4,7 +4,8 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRC = main.cpp \
 	HttpRequest.cpp \
-	HttpParser.cpp \
+	RequestParser/HttpParser.cpp \
+	RequestHandler/RequestHandler.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
