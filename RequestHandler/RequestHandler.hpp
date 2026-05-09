@@ -26,7 +26,7 @@ public:
 private:
 	bool handleGet();
 	// bool handlePost();
-	// bool handleDelete();
+	bool handleDelete();
 
 	bool resolvePath();
 	bool isDirectory(const std::string& path);
