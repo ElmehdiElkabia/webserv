@@ -105,6 +105,25 @@ bool RequestHandler::readFile()
 	return true;
 }
 
+bool RequestHandler::deleteFile()
+{
+	if (fullPath.empty())
+		return false;
+
+	if (!fileExists(fullPath))
+	{
+		std::cerr << "File not found: " << fullPath << std::endl;
+		return false;
+	}
+
+	if (std::remove(fullPath.c_str()) != 0)
+	{
+		std::cerr << "Failed to delete file: " << fullPath << std::endl;
+		return false;
+	}
+
+	return true;
+}
 
 bool RequestHandler::handleDelete()
 {
@@ -113,10 +132,5 @@ bool RequestHandler::handleDelete()
 		std::cerr << "File not found: " << fullPath << std::endl;
 		return false;
 	}
-	if (std::remove(fullPath.c_str()) != 0)
-	{
-		std::cerr << "Failed to delete file: " << fullPath << std::endl;
-		return false;
-	}
-	return true;
+	return deleteFile();
 }
