@@ -16,8 +16,12 @@ public:
     std::map<std::string, std::string> headers;
     std::string body;
 
-    // Parsing / validation state
+	std::string ContentType;
+	std::string TransferEncoding;
+	std::string Host;
     size_t      contentLength;
+
+    // Parsing / validation state
     bool        isComplete;
     bool        isValid;
     int         errorCode;
