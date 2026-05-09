@@ -34,7 +34,7 @@ private:
 
 	bool readFile();
 	// bool writeFile();
-	// bool deleteFile();
+	bool deleteFile();
 
 	// std::string getFileExtension(const std::string& path);
 	std::string normalizePath(const std::string& path);
