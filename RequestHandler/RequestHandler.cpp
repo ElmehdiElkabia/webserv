@@ -3,8 +3,10 @@
 RequestHandler::RequestHandler()
 	: rootDirectory("./www"),
 	  indexFile("index.html"),
-	//   maxBodySize(1000000),
-	  fullPath("") {}
+	  //   maxBodySize(1000000),
+	  fullPath("")
+{
+}
 
 bool RequestHandler::HandleRequest(const HttpRequest &request)
 {
@@ -14,8 +16,8 @@ bool RequestHandler::HandleRequest(const HttpRequest &request)
 
 	if (currentRequest.method == "GET")
 		return handleGet();
-	// else if (currentRequest.method == "POST")
-	// 	return handlePost();
+	else if (currentRequest.method == "POST")
+		return handlePost();
 	else if (currentRequest.method == "DELETE")
 		return handleDelete();
 	else
@@ -36,8 +38,7 @@ std::string RequestHandler::normalizePath(const std::string &path)
 
 bool RequestHandler::fileExists(const std::string &path)
 {
-	struct stat buffer;
-	return (stat(path.c_str(), &buffer) == 0);
+	return (access(path.c_str(), F_OK) == 0);
 }
 
 bool RequestHandler::isDirectory(const std::string &path)
@@ -50,19 +51,19 @@ bool RequestHandler::isDirectory(const std::string &path)
 
 bool RequestHandler::resolvePath()
 {
-    std::string requestPath = currentRequest.path;
+	std::string requestPath = currentRequest.path;
 
-    requestPath = normalizePath(requestPath);
+	requestPath = normalizePath(requestPath);
 
-    if (requestPath.empty())
-        return false;
+	if (requestPath.empty())
+		return false;
 
-    if (requestPath == "/")
-        requestPath = "/" + indexFile;
+	if (requestPath == "/")
+		requestPath = "/" + indexFile;
 
-    fullPath = rootDirectory + requestPath;
+	fullPath = rootDirectory + requestPath;
 
-    return true;
+	return true;
 }
 
 bool RequestHandler::handleGet()
@@ -107,30 +108,189 @@ bool RequestHandler::readFile()
 
 bool RequestHandler::deleteFile()
 {
-	if (fullPath.empty())
-		return false;
+    // Empty path protection
+    if (fullPath.empty())
+        return false;
 
-	if (!fileExists(fullPath))
+    // Check existence
+    if (!fileExists(fullPath))
+    {
+        std::cerr << "File not found: "
+                  << fullPath << std::endl;
+        return false;
+    }
+
+    // Check write permission
+    if (access(fullPath.c_str(), W_OK) != 0)
+    {
+        std::cerr << "Permission denied: "
+                  << fullPath << std::endl;
+        return false;
+    }
+
+    // Delete file
+    if (std::remove(fullPath.c_str()) != 0)
+    {
+        std::cerr << "Failed to delete file: "
+                  << fullPath << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool RequestHandler::handleDelete()
+{
+    // Resolve filesystem path first
+    if (!resolvePath())
+    {
+        std::cerr << "Failed to resolve path" << std::endl;
+        return false;
+    }
+
+    // Prevent deleting directories
+    if (isDirectory(fullPath))
+    {
+        std::cerr << "Cannot delete directory: "
+                  << fullPath << std::endl;
+        return false;
+    }
+
+    // Delete resource
+    return deleteFile();
+}
+
+bool RequestHandler::validateBodySize()
+{
+	if (currentRequest.body.size() > maxBodySize)
 	{
-		std::cerr << "File not found: " << fullPath << std::endl;
+		std::cerr << "Request body too large: " << currentRequest.body.size() << " bytes" << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool RequestHandler::handlePost()
+{
+	// Empty body check
+	if (currentRequest.body.empty())
+	{
+		std::cerr << "POST request missing body" << std::endl;
 		return false;
 	}
 
-	if (std::remove(fullPath.c_str()) != 0)
+	// Body size protection
+	if (currentRequest.body.size() > maxBodySize)
 	{
-		std::cerr << "Failed to delete file: " << fullPath << std::endl;
+		std::cerr << "POST body exceeds maxBodySize" << std::endl;
+		return false;
+	}
+
+	if (currentRequest.ContentType == "application/x-www-form-urlencoded")
+	{
+		// Parse form data
+		if (!parseUrlEncoded())
+		{
+			std::cerr << "Failed to parse urlencoded body" << std::endl;
+			return false;
+		}
+
+		// Save parsed/raw POST data
+		if (!savePostData())
+		{
+			std::cerr << "Failed to save POST data" << std::endl;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool RequestHandler::parseUrlEncoded()
+{
+	std::string body = currentRequest.body;
+	std::vector<std::string> pairs = split(body, '&');
+	if (pairs.empty())
+		return false;
+	for (size_t i = 0; i < pairs.size(); ++i)
+	{
+		std::vector<std::string> kv = split(pairs[i], '=');
+		if (kv.size() != 2)
+			continue;
+		std::string key = kv[0];
+		std::string value = kv[1];
+
+		formData[key] = value;
+	}
+	return true;
+}
+bool RequestHandler::writeFile()
+{
+	// Example filename
+	std::string uploadPath = rootDirectory + "/uploads/data.txt";
+	// Open output file
+	std::ofstream outFile(uploadPath.c_str(), std::ios::out | std::ios::binary);
+
+	// Check open success
+	if (!outFile.is_open())
+	{
+		std::cerr << "Failed to open file for writing: "
+				  << uploadPath << std::endl;
+		return false;
+	}
+
+	// Write POST body into file
+	outFile << currentRequest.body;
+
+	// Close file
+	outFile.close();
+
+	return true;
+}
+
+bool RequestHandler::savePostData()
+{
+	// Upload directory
+	std::string uploadDir = rootDirectory + "/uploads";
+
+	// Create uploads directory if missing
+	if (!fileExists(uploadDir))
+	{
+		if (mkdir(uploadDir.c_str(), 0755) != 0)
+		{
+			std::cerr << "Failed to create upload directory: "
+					  << uploadDir << std::endl;
+			return false;
+		}
+	}
+
+	// Save POST body into file
+	if (!writeFile())
+	{
+		std::cerr << "Failed to save POST data" << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
-bool RequestHandler::handleDelete()
+std::vector<std::string>
+RequestHandler::split(const std::string &str, char delimiter)
 {
-	if(!fileExists(fullPath))
+	std::vector<std::string> tokens;
+	std::string token;
+	for (size_t i = 0; i < str.size(); ++i)
 	{
-		std::cerr << "File not found: " << fullPath << std::endl;
-		return false;
+		if (str[i] == delimiter)
+		{
+			if (!token.empty())
+				tokens.push_back(token);
+			token.clear();
+		}
+		else
+			token += str[i];
 	}
-	return deleteFile();
+	if (!token.empty())
+		tokens.push_back(token);
+	return tokens;
 }
