@@ -7,13 +7,13 @@ int main()
 	HttpParser parser;
 
 	// Simulate receiving data in chunks
-	parser.appendData(
-		"GET /index.html HTTP/1.1\r\n"
-		"Host: example.com\r\n"
-		"User-Agent: Mozilla/5.0\r\n"
-		"Accept: text/html\r\n"
-		"Connection: keep-alive\r\n"
-		"\r\n");
+	// parser.appendData(
+	// 	"GET /index.html HTTP/1.1\r\n"
+	// 	"Host: example.com\r\n"
+	// 	"User-Agent: Mozilla/5.0\r\n"
+	// 	"Accept: text/html\r\n"
+	// 	"Connection: keep-alive\r\n"
+	// 	"\r\n");
 
 	// parser.appendData(
 	// 	"GET / HTTP/1.1\r\n"
@@ -30,6 +30,15 @@ int main()
 	// 	"Accept: text/html\r\n"
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
+
+	parser.appendData(
+		"DELETE /indexxxxx.html HTTP/1.1\r\n"
+		"Host: example.com\r\n"
+		"User-Agent: Mozilla/5.0\r\n"
+		"Accept: text/html\r\n"
+		"Connection: keep-alive\r\n"
+		"\r\n");
+
 	int result = parser.parse();
 	if (result == 1)
 	{
