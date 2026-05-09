@@ -16,8 +16,8 @@ bool RequestHandler::HandleRequest(const HttpRequest &request)
 		return handleGet();
 	// else if (currentRequest.method == "POST")
 	// 	return handlePost();
-	// else if (currentRequest.method == "DELETE")
-	// 	return handleDelete();
+	else if (currentRequest.method == "DELETE")
+		return handleDelete();
 	else
 	{
 		std::cerr << "Unsupported HTTP method: " << currentRequest.method << std::endl;
@@ -102,5 +102,21 @@ bool RequestHandler::readFile()
 	}
 	file.close();
 
+	return true;
+}
+
+
+bool RequestHandler::handleDelete()
+{
+	if(!fileExists(fullPath))
+	{
+		std::cerr << "File not found: " << fullPath << std::endl;
+		return false;
+	}
+	if (std::remove(fullPath.c_str()) != 0)
+	{
+		std::cerr << "Failed to delete file: " << fullPath << std::endl;
+		return false;
+	}
 	return true;
 }
