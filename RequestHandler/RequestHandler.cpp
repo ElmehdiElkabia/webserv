@@ -3,7 +3,7 @@
 RequestHandler::RequestHandler()
 	: rootDirectory("./www"),
 	  indexFile("index.html"),
-	  maxBodySize(1000000),
+	    maxBodySize(1000000),
 	  fullPath("")
 {
 }
