@@ -1,18 +1,26 @@
 #include "RequestHandler.hpp"
+#include <sstream>
 
 RequestHandler::RequestHandler()
 	: rootDirectory("./www"),
 	  indexFile("index.html"),
-	    maxBodySize(1000000),
+	  maxBodySize(1000000),
 	  fullPath("")
 {
 }
 
-bool RequestHandler::HandleRequest(const HttpRequest &request)
+HttpResponse RequestHandler::HandleRequest(const HttpRequest &request)
 {
 	currentRequest = request;
+	HttpResponse resp;
+
 	if (!resolvePath())
-		return false;
+	{
+		resp.setStatus(400);
+		resp.setBody("Bad Request: failed to resolve path");
+		resp.setHeader("Content-Type", "text/plain");
+		return resp;
+	}
 
 	if (currentRequest.method == "GET")
 		return handleGet();
@@ -22,18 +30,22 @@ bool RequestHandler::HandleRequest(const HttpRequest &request)
 		return handleDelete();
 	else
 	{
-		std::cerr << "Unsupported HTTP method: " << currentRequest.method << std::endl;
-		return false;
+		resp.setStatus(405);
+		resp.setBody("Method Not Allowed");
+		resp.setHeader("Content-Type", "text/plain");
+		return resp;
 	}
 }
 
 std::string RequestHandler::normalizePath(const std::string &path)
 {
-	std::string normalized = path;
-	size_t pos;
-	while ((pos = normalized.find("..")) != std::string::npos)
-		normalized.erase(pos, 2);
-	return normalized;
+	if (path.empty())
+		return "";
+
+	if (path.find("..") != std::string::npos)
+		return "";
+
+	return path;
 }
 
 bool RequestHandler::fileExists(const std::string &path)
@@ -66,55 +78,43 @@ bool RequestHandler::resolvePath()
 	return true;
 }
 
-bool RequestHandler::handleGet()
+HttpResponse RequestHandler::handleGet()
 {
 	if (!resolvePath())
-	{
-		std::cerr << "Failed to resolve path" << std::endl;
-		return false;
-	}
+		return errorResponse(400, "Bad Request");
 
 	if (!fileExists(fullPath))
-	{
-		std::cerr << "404 Not Found: "
-				  << fullPath << std::endl;
-		return false;
-	}
+		return errorResponse(404, "Not Found");
 
 	if (isDirectory(fullPath))
 	{
 		if (fullPath[fullPath.size() - 1] != '/')
 			fullPath += "/";
 
-		fullPath += indexFile;
+		std::string indexPath = fullPath + indexFile;
 
-		if (!fileExists(fullPath))
-		{
-			std::cerr << "403 Forbidden (no index file): "
-					  << fullPath << std::endl;
+		if (!fileExists(indexPath))
+			return errorResponse(403, "Forbidden");
 
-			return false;
-		}
+		fullPath = indexPath;
 	}
 
 	if (access(fullPath.c_str(), R_OK) != 0)
-	{
-		std::cerr << "403 Forbidden (not readable): "
-				  << fullPath << std::endl;
-		return false;
-	}
+		return errorResponse(403, "Forbidden");
 
 	if (!readFile())
-	{
-		std::cerr << "Failed to read file: " << fullPath << std::endl;
-		return false;
-	}
+		return errorResponse(500, "Internal Server Error");
 
 	std::string extension = getFileExtension(fullPath);
-
 	std::string mimeType = getMimeType(extension);
 
-	return true;
+	HttpResponse resp;
+
+	resp.setStatus(200);
+	resp.setHeader("Content-Type", mimeType);
+	resp.setBody(resourceContent);
+
+	return resp;
 }
 
 bool RequestHandler::readFile()
@@ -122,22 +122,28 @@ bool RequestHandler::readFile()
 	if (fullPath.empty())
 		return false;
 
-	std::ifstream file(fullPath.c_str());
+	std::ifstream file(fullPath.c_str(), std::ios::in | std::ios::binary);
 	if (!file.is_open())
-	{
-		std::cerr << "Failed to open file: " << fullPath << std::endl;
 		return false;
-	}
 
 	resourceContent.clear();
 
-	std::string line;
-	while (std::getline(file, line))
+	file.seekg(0, std::ios::end);
+	std::streampos size = file.tellg();
+
+	if (size < 0)
 	{
-		resourceContent += line;
-		if (!file.eof())
-			resourceContent += "\n";
+		file.close();
+		return false;
 	}
+
+	resourceContent.resize(static_cast<size_t>(size));
+
+	file.seekg(0, std::ios::beg);
+
+	if (size > 0)
+		file.read(&resourceContent[0], size);
+
 	file.close();
 
 	return true;
@@ -145,150 +151,121 @@ bool RequestHandler::readFile()
 
 bool RequestHandler::deleteFile()
 {
-	// Empty path protection
 	if (fullPath.empty())
 		return false;
 
-	// Check existence
-	if (!fileExists(fullPath))
-	{
-		std::cerr << "File not found: "
-				  << fullPath << std::endl;
-		return false;
-	}
-
-	// Check write permission
-	if (access(fullPath.c_str(), W_OK) != 0)
-	{
-		std::cerr << "Permission denied: "
-				  << fullPath << std::endl;
-		return false;
-	}
-
-	// Delete file
 	if (std::remove(fullPath.c_str()) != 0)
-	{
-		std::cerr << "Failed to delete file: "
-				  << fullPath << std::endl;
 		return false;
-	}
 
 	return true;
 }
 
-bool RequestHandler::handleDelete()
+HttpResponse RequestHandler::handleDelete()
 {
-	// Resolve filesystem path first
 	if (!resolvePath())
-	{
-		std::cerr << "Failed to resolve path" << std::endl;
-		return false;
-	}
+		return errorResponse(400, "Bad Request");
 
-	// Prevent deleting directories
+	if (!fileExists(fullPath))
+		return errorResponse(404, "Not Found");
+
 	if (isDirectory(fullPath))
-	{
-		std::cerr << "Cannot delete directory: "
-				  << fullPath << std::endl;
-		return false;
-	}
+		return errorResponse(403, "Forbidden");
 
-	// Delete resource
-	return deleteFile();
+	if (!deleteFile())
+		return errorResponse(403, "Forbidden");
+
+	HttpResponse resp;
+
+	resp.setStatus(204);
+	resp.setHeader("Content-Type", "text/plain");
+	resp.setBody("");
+
+	return resp;
 }
 
 bool RequestHandler::validateBodySize()
 {
 	if (currentRequest.body.size() > maxBodySize)
 	{
-		std::cerr << "Request body too large: " << currentRequest.body.size() << " bytes" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool RequestHandler::handlePost()
+HttpResponse RequestHandler::handlePost()
 {
-	// Empty body check
+	std::string contentType;
+	HttpResponse resp;
+
 	if (currentRequest.body.empty())
-	{
-		std::cerr << "POST request missing body" << std::endl;
-		return false;
-	}
+		return errorResponse(400, "Bad Request");
 
-	// Body size protection
-	if (currentRequest.body.size() > maxBodySize)
-	{
-		std::cerr << "POST body exceeds maxBodySize" << std::endl;
-		return false;
-	}
+	if (!validateBodySize())
+		return errorResponse(413, "Payload Too Large");
 
-	if (currentRequest.ContentType == "application/x-www-form-urlencoded")
-	{
+	if (currentRequest.headers.find("content-type") == currentRequest.headers.end())
+		return errorResponse(400, "Missing Content-Type");
 
-		// Parse form data
+	contentType = currentRequest.headers["content-type"];
+
+	if (contentType == "application/x-www-form-urlencoded")
+	{
 		if (!parseUrlEncoded())
-		{
-			std::cerr << "Failed to parse urlencoded body" << std::endl;
-			return false;
-		}
+			return errorResponse(400, "Malformed form data");
 
-		// Save parsed/raw POST data
 		if (!savePostData())
-		{
-			std::cerr << "Failed to save POST data" << std::endl;
-			return false;
-		}
+			return errorResponse(500, "Internal Server Error");
 	}
-	else if (currentRequest.ContentType == "multipart/form-data")
+	else if (contentType.find("multipart/form-data") != std::string::npos)
 	{
 		if (!savePostData())
-		{
-			std::cerr << "Failed to save multipart POST data" << std::endl;
-			return false;
-		}
+			return errorResponse(500, "Internal Server Error");
+	}
+	else
+	{
+		return errorResponse(415, "Unsupported Media Type");
 	}
 
-		return true;
+	resp.setStatus(201);
+	resp.setHeader("Content-Type", "text/plain");
+	resp.setBody("Created");
+
+	return resp;
 }
 
 bool RequestHandler::parseUrlEncoded()
 {
-	std::string body = currentRequest.body;
-	std::vector<std::string> pairs = split(body, '&');
+	formData.clear();
+
+	std::vector<std::string> pairs = split(currentRequest.body, '&');
+
 	if (pairs.empty())
 		return false;
+
 	for (size_t i = 0; i < pairs.size(); ++i)
 	{
 		std::vector<std::string> kv = split(pairs[i], '=');
-		if (kv.size() != 2)
-			continue;
-		std::string key = kv[0];
-		std::string value = kv[1];
 
-		formData[key] = value;
+		if (kv.size() != 2)
+			return false;
+
+		formData[kv[0]] = kv[1];
 	}
+
 	return true;
 }
 bool RequestHandler::writeFile()
 {
-	// Example filename
-	std::string uploadPath = rootDirectory + "/uploads/data.txt";
-	// Open output file
-	std::ofstream outFile(uploadPath.c_str(), std::ios::out | std::ios::binary);
+	std::ostringstream name;
+	name << rootDirectory << "/uploads/post_" << std::time(NULL) << ".txt";
 
-	// Check open success
+	std::ofstream outFile(name.str().c_str(), std::ios::out | std::ios::binary);
+
 	if (!outFile.is_open())
-	{
-		std::cerr << "Failed to open file for writing: "
-				  << uploadPath << std::endl;
 		return false;
-	}
 
-	// Write POST body into file
-	outFile << currentRequest.body;
+	outFile.write(currentRequest.body.c_str(), currentRequest.body.size());
 
-	// Close file
 	outFile.close();
 
 	return true;
@@ -296,28 +273,15 @@ bool RequestHandler::writeFile()
 
 bool RequestHandler::savePostData()
 {
-	// Upload directory
 	std::string uploadDir = rootDirectory + "/uploads";
 
-	// Create uploads directory if missing
 	if (!fileExists(uploadDir))
 	{
 		if (mkdir(uploadDir.c_str(), 0755) != 0)
-		{
-			std::cerr << "Failed to create upload directory: "
-					  << uploadDir << std::endl;
 			return false;
-		}
 	}
 
-	// Save POST body into file
-	if (!writeFile())
-	{
-		std::cerr << "Failed to save POST data" << std::endl;
-		return false;
-	}
-
-	return true;
+	return writeFile();
 }
 
 std::vector<std::string>
@@ -367,4 +331,17 @@ std::string RequestHandler::getMimeType(const std::string &extension)
 		return "text/plain";
 	else
 		return "application/octet-stream";
+}
+
+
+
+HttpResponse RequestHandler::errorResponse(int code, const std::string& message)
+{
+	HttpResponse resp;
+
+	resp.setStatus(code);
+	resp.setHeader("Content-Type", "text/plain");
+	resp.setBody(message);
+
+	return resp;
 }
