@@ -14,14 +14,14 @@ int main()
 	// 	"Accept: text/html\r\n"
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
-	parser.appendData(
-		"GET /style.css HTTP/1.1\r\n"
-		"Host: example.com\r\n"
-		"User-Agent: Mozilla/5.0\r\n"
-		"Accept: text/html\r\n"
-		"Connection: keep-alive\r\n"
-		"Content-Type: text/css\r\n"
-		"\r\n");
+	// parser.appendData(
+	// 	"GET /style.css HTTP/1.1\r\n"
+	// 	"Host: example.com\r\n"
+	// 	"User-Agent: Mozilla/5.0\r\n"
+	// 	"Accept: text/html\r\n"
+	// 	"Connection: keep-alive\r\n"
+	// 	"Content-Type: text/css\r\n"
+	// 	"\r\n");
 
 	// parser.appendData(
 	// 	"GET / HTTP/1.1\r\n"
@@ -47,18 +47,22 @@ int main()
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
 
-	// parser.appendData(
-	// 	"POST /submit HTTP/1.1\r\n"
-	// 	"Host: example.com\r\n"
-	// 	"Content-Type: application/x-www-form-urlencoded\r\n"
-	// 	"Content-Length: 65\r\n"
-	// 	"\r\n"
-	// 	"username=john&age=22"
-	// 	"\r\n"
-	// 	"email=john%40example.com"
-	// 	"\r\n"
-	// 	"city=New%20York"
-	// 	"\r\n");
+		// parser.appendData(
+		// "DELETE /doesnotexist.html HTTP/1.1\r\n"
+		// "Host: example.com\r\n"
+		// "User-Agent: Mozilla/5.0\r\n"
+		// "Accept: text/html\r\n"
+		// "Connection: keep-alive\r\n"
+		// "\r\n");
+
+	parser.appendData(
+		"POST /submit HTTP/1.1\r\n"
+		"Host: example.com\r\n"
+		"Content-Type: application/x-www-form-urlencoded\r\n"
+		"Content-Length: 180\r\n"
+		"\r\n"
+		"filename=en.subject%20%281%29.pdf&filename2=hands-on-network-programming-with-c-learn-socket-programming-in-c-and-write-secure-and-optimized-network-code-9781789349863_compress.pdf"
+		"\r\n");
 
 	int result = parser.parse();
 	if (result == 1)
@@ -76,14 +80,10 @@ int main()
 		// std::cout << "Body: " << request.body << std::endl;
 
 		RequestHandler handler;
-		if (handler.HandleRequest(request))
-		{
-			std::cout << "Request handled successfully" << std::endl;
-		}
-		else
-		{
-			std::cerr << "Failed to handle request" << std::endl;
-		}
+			{
+				HttpResponse response = handler.HandleRequest(request);
+				std::cout << response.buildResponse() << std::endl;
+			}
 	}
 	else if (result == -1)
 	{
