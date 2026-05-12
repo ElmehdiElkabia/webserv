@@ -68,16 +68,56 @@ bool RequestHandler::resolvePath()
 
 bool RequestHandler::handleGet()
 {
-
-	if (isDirectory(fullPath))
-		fullPath += "/" + indexFile;
+	if (!resolvePath())
+	{
+		std::cerr << "Failed to resolve path" << std::endl;
+		return false;
+	}
 
 	if (!fileExists(fullPath))
 	{
-		std::cerr << "File not found: " << fullPath << std::endl;
+		std::cerr << "404 Not Found: "
+				  << fullPath << std::endl;
 		return false;
 	}
-	return readFile();
+
+	if (isDirectory(fullPath))
+	{
+		if (fullPath[fullPath.size() - 1] != '/')
+			fullPath += "/";
+
+		fullPath += indexFile;
+
+		if (!fileExists(fullPath))
+		{
+			std::cerr << "403 Forbidden (no index file): "
+					  << fullPath << std::endl;
+
+			return false;
+		}
+	}
+
+	if (access(fullPath.c_str(), R_OK) != 0)
+	{
+		std::cerr << "403 Forbidden (not readable): "
+				  << fullPath << std::endl;
+		return false;
+	}
+
+	if (!readFile())
+	{
+		std::cerr << "Failed to read file: " << fullPath << std::endl;
+		return false;
+	}
+
+	// std::string extension = getFileExtension(fullPath);
+
+	// std::string mimeType = getMimeType(extension);
+
+	// std::cout << "MIME Type: "
+	//           << mimeType << std::endl;
+
+	return true;
 }
 
 bool RequestHandler::readFile()
@@ -108,56 +148,56 @@ bool RequestHandler::readFile()
 
 bool RequestHandler::deleteFile()
 {
-    // Empty path protection
-    if (fullPath.empty())
-        return false;
+	// Empty path protection
+	if (fullPath.empty())
+		return false;
 
-    // Check existence
-    if (!fileExists(fullPath))
-    {
-        std::cerr << "File not found: "
-                  << fullPath << std::endl;
-        return false;
-    }
+	// Check existence
+	if (!fileExists(fullPath))
+	{
+		std::cerr << "File not found: "
+				  << fullPath << std::endl;
+		return false;
+	}
 
-    // Check write permission
-    if (access(fullPath.c_str(), W_OK) != 0)
-    {
-        std::cerr << "Permission denied: "
-                  << fullPath << std::endl;
-        return false;
-    }
+	// Check write permission
+	if (access(fullPath.c_str(), W_OK) != 0)
+	{
+		std::cerr << "Permission denied: "
+				  << fullPath << std::endl;
+		return false;
+	}
 
-    // Delete file
-    if (std::remove(fullPath.c_str()) != 0)
-    {
-        std::cerr << "Failed to delete file: "
-                  << fullPath << std::endl;
-        return false;
-    }
+	// Delete file
+	if (std::remove(fullPath.c_str()) != 0)
+	{
+		std::cerr << "Failed to delete file: "
+				  << fullPath << std::endl;
+		return false;
+	}
 
-    return true;
+	return true;
 }
 
 bool RequestHandler::handleDelete()
 {
-    // Resolve filesystem path first
-    if (!resolvePath())
-    {
-        std::cerr << "Failed to resolve path" << std::endl;
-        return false;
-    }
+	// Resolve filesystem path first
+	if (!resolvePath())
+	{
+		std::cerr << "Failed to resolve path" << std::endl;
+		return false;
+	}
 
-    // Prevent deleting directories
-    if (isDirectory(fullPath))
-    {
-        std::cerr << "Cannot delete directory: "
-                  << fullPath << std::endl;
-        return false;
-    }
+	// Prevent deleting directories
+	if (isDirectory(fullPath))
+	{
+		std::cerr << "Cannot delete directory: "
+				  << fullPath << std::endl;
+		return false;
+	}
 
-    // Delete resource
-    return deleteFile();
+	// Delete resource
+	return deleteFile();
 }
 
 bool RequestHandler::validateBodySize()
