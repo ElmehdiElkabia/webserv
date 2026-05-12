@@ -5,14 +5,14 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 SRC = main.cpp \
 	HttpRequest.cpp \
 	RequestParser/HttpParser.cpp \
-	RequestHandler/RequestHandler.cpp
+	RequestHandler/RequestHandler.cpp \
+	HttpResponse/HttpResponse.cpp \
 
 OBJ = $(SRC:.cpp=.o)
 
 NAME = webserv
 
 all: $(NAME)
-	clear
 
 $(NAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
