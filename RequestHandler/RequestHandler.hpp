@@ -8,6 +8,7 @@
 #include <vector>
 #include "../HttpRequest.hpp"
 #include "../RequestParser/HttpParser.hpp"
+#include "../HttpResponse/HttpResponse.hpp"
 
 class RequestHandler
 {
