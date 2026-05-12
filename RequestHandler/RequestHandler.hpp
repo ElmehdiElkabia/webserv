@@ -41,7 +41,8 @@ private:
 	bool writeFile();
 	bool deleteFile();
 
-	// std::string getFileExtension(const std::string& path);
+	std::string getFileExtension(const std::string& path);
+	std::string getMimeType(const std::string& extension);
 	std::string normalizePath(const std::string &path);
 
 	bool validateBodySize();
