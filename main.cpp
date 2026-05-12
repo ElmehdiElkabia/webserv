@@ -47,22 +47,22 @@ int main()
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
 
-		// parser.appendData(
-		// "DELETE /doesnotexist.html HTTP/1.1\r\n"
-		// "Host: example.com\r\n"
-		// "User-Agent: Mozilla/5.0\r\n"
-		// "Accept: text/html\r\n"
-		// "Connection: keep-alive\r\n"
-		// "\r\n");
-
-	parser.appendData(
-		"POST /submit HTTP/1.1\r\n"
+		parser.appendData(
+		"DELETE /doesnotexist.html HTTP/1.1\r\n"
 		"Host: example.com\r\n"
-		"Content-Type: application/x-www-form-urlencoded\r\n"
-		"Content-Length: 180\r\n"
-		"\r\n"
-		"filename=en.subject%20%281%29.pdf&filename2=hands-on-network-programming-with-c-learn-socket-programming-in-c-and-write-secure-and-optimized-network-code-9781789349863_compress.pdf"
+		"User-Agent: Mozilla/5.0\r\n"
+		"Accept: text/html\r\n"
+		"Connection: keep-alive\r\n"
 		"\r\n");
+
+	// parser.appendData(
+	// 	"POST /submit HTTP/1.1\r\n"
+	// 	"Host: example.com\r\n"
+	// 	"Content-Type: application/x-www-form-urlencoded\r\n"
+	// 	"Content-Length: 180\r\n"
+	// 	"\r\n"
+	// 	"filename=en.subject%20%281%29.pdf&filename2=hands-on-network-programming-with-c-learn-socket-programming-in-c-and-write-secure-and-optimized-network-code-9781789349863_compress.pdf"
+	// 	"\r\n");
 
 	int result = parser.parse();
 	if (result == 1)

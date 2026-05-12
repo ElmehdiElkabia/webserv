@@ -1,5 +1,6 @@
 #include "HttpResponse.hpp"
 
+
 HttpResponse::HttpResponse() : version("HTTP/1.1"), statusCode(200), reasonPhrase("OK") {}
 
 void HttpResponse::setStatus(int code)
