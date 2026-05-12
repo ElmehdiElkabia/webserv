@@ -3,7 +3,7 @@
 RequestHandler::RequestHandler()
 	: rootDirectory("./www"),
 	  indexFile("index.html"),
-	  //   maxBodySize(1000000),
+	  maxBodySize(1000000),
 	  fullPath("")
 {
 }
@@ -110,12 +110,9 @@ bool RequestHandler::handleGet()
 		return false;
 	}
 
-	// std::string extension = getFileExtension(fullPath);
+	std::string extension = getFileExtension(fullPath);
 
-	// std::string mimeType = getMimeType(extension);
-
-	// std::cout << "MIME Type: "
-	//           << mimeType << std::endl;
+	std::string mimeType = getMimeType(extension);
 
 	return true;
 }
@@ -228,6 +225,7 @@ bool RequestHandler::handlePost()
 
 	if (currentRequest.ContentType == "application/x-www-form-urlencoded")
 	{
+
 		// Parse form data
 		if (!parseUrlEncoded())
 		{
@@ -242,8 +240,16 @@ bool RequestHandler::handlePost()
 			return false;
 		}
 	}
+	else if (currentRequest.ContentType == "multipart/form-data")
+	{
+		if (!savePostData())
+		{
+			std::cerr << "Failed to save multipart POST data" << std::endl;
+			return false;
+		}
+	}
 
-	return true;
+		return true;
 }
 
 bool RequestHandler::parseUrlEncoded()
@@ -333,4 +339,32 @@ RequestHandler::split(const std::string &str, char delimiter)
 	if (!token.empty())
 		tokens.push_back(token);
 	return tokens;
+}
+
+std::string RequestHandler::getFileExtension(const std::string &path)
+{
+	size_t dotPos = path.find_last_of('.');
+	if (dotPos == std::string::npos)
+		return "";
+	return path.substr(dotPos + 1);
+}
+
+std::string RequestHandler::getMimeType(const std::string &extension)
+{
+	if (extension == "html" || extension == "htm")
+		return "text/html";
+	else if (extension == "css")
+		return "text/css";
+	else if (extension == "js")
+		return "application/javascript";
+	else if (extension == "jpg" || extension == "jpeg")
+		return "image/jpeg";
+	else if (extension == "png")
+		return "image/png";
+	else if (extension == "gif")
+		return "image/gif";
+	else if (extension == "txt")
+		return "text/plain";
+	else
+		return "application/octet-stream";
 }
