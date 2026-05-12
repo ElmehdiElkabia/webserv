@@ -2,6 +2,8 @@
 #define REQUEST_HANDLER_HPP
 
 #include <iostream>
+#include <ctime>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
@@ -27,12 +29,12 @@ private:
 
 public:
 	RequestHandler();
-	bool HandleRequest(const HttpRequest &request);
+	HttpResponse HandleRequest(const HttpRequest &request);
 
 private:
-	bool handleGet();
-	bool handlePost();
-	bool handleDelete();
+	HttpResponse handleGet();
+	HttpResponse handlePost();
+	HttpResponse handleDelete();
 
 	bool resolvePath();
 	bool isDirectory(const std::string &path);
@@ -53,6 +55,8 @@ private:
 	bool savePostData();
 
 	std::vector<std::string> split(const std::string &str, char delimiter);
+
+	HttpResponse errorResponse(int code, const std::string& message);
 };
 
 #endif
