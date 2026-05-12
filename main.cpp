@@ -14,6 +14,14 @@ int main()
 	// 	"Accept: text/html\r\n"
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
+	parser.appendData(
+		"GET /style.css HTTP/1.1\r\n"
+		"Host: example.com\r\n"
+		"User-Agent: Mozilla/5.0\r\n"
+		"Accept: text/html\r\n"
+		"Connection: keep-alive\r\n"
+		"Content-Type: text/css\r\n"
+		"\r\n");
 
 	// parser.appendData(
 	// 	"GET / HTTP/1.1\r\n"
@@ -39,18 +47,18 @@ int main()
 	// 	"Connection: keep-alive\r\n"
 	// 	"\r\n");
 
-	parser.appendData(
-		"POST /submit HTTP/1.1\r\n"
-		"Host: example.com\r\n"
-		"Content-Type: application/x-www-form-urlencoded\r\n"
-		"Content-Length: 65\r\n"
-		"\r\n"
-		"username=john&age=22"
-		"\r\n"
-		"email=john%40example.com"
-		"\r\n"
-		"city=New%20York"
-		"\r\n");
+	// parser.appendData(
+	// 	"POST /submit HTTP/1.1\r\n"
+	// 	"Host: example.com\r\n"
+	// 	"Content-Type: application/x-www-form-urlencoded\r\n"
+	// 	"Content-Length: 65\r\n"
+	// 	"\r\n"
+	// 	"username=john&age=22"
+	// 	"\r\n"
+	// 	"email=john%40example.com"
+	// 	"\r\n"
+	// 	"city=New%20York"
+	// 	"\r\n");
 
 	int result = parser.parse();
 	if (result == 1)
