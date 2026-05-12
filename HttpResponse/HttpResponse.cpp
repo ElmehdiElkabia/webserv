@@ -51,7 +51,9 @@ std::string HttpResponse::getStatusMessage(int code) const
 
 std::string HttpResponse::buildResponse() const
 {
-	std::string response = version + " " + std::to_string(statusCode) + " " + reasonPhrase + "\r\n";
+	std::ostringstream statusStream;
+	statusStream << statusCode;
+	std::string response = version + " " + statusStream.str() + " " + reasonPhrase + "\r\n";
 
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
 	{
